@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,94 +14,57 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
 import { Plus, Search, MoreVertical, Download, Eye, Edit, Trash2, FileText } from "lucide-react"
+import { getInvoices, deleteInvoice, updateInvoiceStatus } from "@/app/actions/invoices"
+import { generateInvoicePDF } from "@/lib/pdf"
+import { toast } from "sonner"
 
 interface Invoice {
-  id: string
-  invoiceNumber: string
-  customer: string
-  amount: number
-  status: "paid" | "pending" | "overdue" | "draft"
-  date: string
-  dueDate: string
+  id: number
+  invoice_number: string
+  customer_name: string
+  total_amount: number
+  invoices_status: string
+  created_at: string
+  due_date: string | null
 }
 
 export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const mockInvoices: Invoice[] = [
-    {
-      id: "1",
-      invoiceNumber: "INV-001",
-      customer: "Acme Corporation",
-      amount: 1250.0,
-      status: "paid",
-      date: "2025-01-15",
-      dueDate: "2025-02-15",
-    },
-    {
-      id: "2",
-      invoiceNumber: "INV-002",
-      customer: "TechStart Inc",
-      amount: 2800.0,
-      status: "pending",
-      date: "2025-01-14",
-      dueDate: "2025-02-14",
-    },
-    {
-      id: "3",
-      invoiceNumber: "INV-003",
-      customer: "Global Solutions Ltd",
-      amount: 950.0,
-      status: "paid",
-      date: "2025-01-13",
-      dueDate: "2025-02-13",
-    },
-    {
-      id: "4",
-      invoiceNumber: "INV-004",
-      customer: "Digital Agency Co",
-      amount: 3200.0,
-      status: "overdue",
-      date: "2025-01-10",
-      dueDate: "2025-01-25",
-    },
-    {
-      id: "5",
-      invoiceNumber: "INV-005",
-      customer: "Startup Hub",
-      amount: 1500.0,
-      status: "paid",
-      date: "2025-01-09",
-      dueDate: "2025-02-09",
-    },
-    {
-      id: "6",
-      invoiceNumber: "INV-006",
-      customer: "Creative Studio",
-      amount: 750.0,
-      status: "draft",
-      date: "2025-01-08",
-      dueDate: "2025-02-08",
-    },
-  ]
+  useEffect(() => {
+    async function fetchInvoices() {
+      try {
+        const data = await getInvoices()
+        setInvoices(data)
+      } catch (error) {
+        toast.error("Failed to load invoices")
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchInvoices()
+  }, [])
 
-  const filteredInvoices = mockInvoices.filter(
+  const filteredInvoices = invoices.filter(
     (invoice) =>
-      invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      invoice.customer.toLowerCase().includes(searchQuery.toLowerCase()),
+      invoice.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      invoice.customer_name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const getStatusBadge = (status: Invoice["status"]) => {
-    const variants = {
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       paid: "default",
       pending: "secondary",
       overdue: "destructive",
       draft: "outline",
-    } as const
+    }
 
     return (
-      <Badge variant={variants[status]} className="capitalize">
+      <Badge variant={variants[status] || "outline"} className="capitalize">
         {status}
       </Badge>
     )
@@ -129,9 +92,11 @@ export default function InvoicesPage() {
           <h2 className="text-3xl font-bold tracking-tight">Invoices</h2>
           <p className="text-muted-foreground">Manage and track all your invoices</p>
         </div>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Invoice
+        <Button asChild className="gap-2">
+          <Link href="/dashboard/invoices/create">
+            <Plus className="h-4 w-4" />
+            Create Invoice
+          </Link>
         </Button>
       </div>
 
@@ -139,14 +104,14 @@ export default function InvoicesPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Total Invoices</CardDescription>
-            <CardTitle className="text-3xl">{mockInvoices.length}</CardTitle>
+            <CardTitle className="text-3xl">{invoices.length}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Paid</CardDescription>
             <CardTitle className="text-3xl text-green-600">
-              {mockInvoices.filter((i) => i.status === "paid").length}
+              {invoices.filter((i) => i.invoices_status === "paid").length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -154,7 +119,7 @@ export default function InvoicesPage() {
           <CardHeader className="pb-3">
             <CardDescription>Pending</CardDescription>
             <CardTitle className="text-3xl text-yellow-600">
-              {mockInvoices.filter((i) => i.status === "pending").length}
+              {invoices.filter((i) => i.invoices_status === "pending").length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -162,7 +127,7 @@ export default function InvoicesPage() {
           <CardHeader className="pb-3">
             <CardDescription>Overdue</CardDescription>
             <CardTitle className="text-3xl text-red-600">
-              {mockInvoices.filter((i) => i.status === "overdue").length}
+              {invoices.filter((i) => i.invoices_status === "overdue").length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -200,7 +165,13 @@ export default function InvoicesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    Loading invoices...
+                  </TableCell>
+                </TableRow>
+              ) : filteredInvoices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground">
                     No invoices found
@@ -214,14 +185,14 @@ export default function InvoicesPage() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
                           <FileText className="h-4 w-4" />
                         </div>
-                        {invoice.invoiceNumber}
+                        {invoice.invoice_number}
                       </div>
                     </TableCell>
-                    <TableCell>{invoice.customer}</TableCell>
-                    <TableCell>{formatDate(invoice.date)}</TableCell>
-                    <TableCell>{formatDate(invoice.dueDate)}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(invoice.amount)}</TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                    <TableCell>{invoice.customer_name}</TableCell>
+                    <TableCell>{formatDate(invoice.created_at)}</TableCell>
+                    <TableCell>{invoice.due_date ? formatDate(invoice.due_date) : "N/A"}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(invoice.total_amount)}</TableCell>
+                    <TableCell>{getStatusBadge(invoice.invoices_status)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -240,12 +211,27 @@ export default function InvoicesPage() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Invoice
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => generateInvoicePDF(invoice)}
+                          >
                             <Download className="mr-2 h-4 w-4" />
                             Download PDF
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={async () => {
+                              if (confirm("Are you sure you want to delete this invoice?")) {
+                                try {
+                                  await deleteInvoice(invoice.id)
+                                  setInvoices(invoices.filter(i => i.id !== invoice.id))
+                                  toast.success("Invoice deleted")
+                                } catch (error) {
+                                  toast.error("Failed to delete invoice")
+                                }
+                              }
+                            }}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete
                           </DropdownMenuItem>

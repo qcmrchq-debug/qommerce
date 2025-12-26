@@ -1,51 +1,55 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, QrCode, Receipt, DollarSign, Users } from "lucide-react"
+import { getDashboardStats } from "@/app/actions/dashboard"
+import Link from "next/link"
 
 export default function DashboardPage() {
-  const stats = [
-    {
-      title: "Total Invoices",
-      value: "24",
-      change: "+12% from last month",
-      icon: FileText,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-    },
-    {
-      title: "Total Revenue",
-      value: "$12,450",
-      change: "+18% from last month",
-      icon: DollarSign,
-      color: "text-green-600",
-      bgColor: "bg-green-50 dark:bg-green-950/30",
-    },
-    {
-      title: "QR Codes Generated",
-      value: "18",
-      change: "+8% from last month",
-      icon: QrCode,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50 dark:bg-purple-950/30",
-    },
-    {
-      title: "Active Customers",
-      value: "12",
-      change: "+4 new this month",
-      icon: Users,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-    },
-  ]
+  const [stats, setStats] = useState({
+    totalInvoices: 0,
+    totalRevenue: 0,
+    qrCodesGenerated: 0,
+    activeCustomers: 0,
+  })
+  const [recentInvoices, setRecentInvoices] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const recentInvoices = [
-    { id: "INV-001", customer: "Acme Corp", amount: "$1,250", status: "Paid", date: "2025-01-15" },
-    { id: "INV-002", customer: "TechStart Inc", amount: "$2,800", status: "Pending", date: "2025-01-14" },
-    { id: "INV-003", customer: "Global Solutions", amount: "$950", status: "Paid", date: "2025-01-13" },
-    { id: "INV-004", customer: "Digital Agency", amount: "$3,200", status: "Overdue", date: "2025-01-10" },
-    { id: "INV-005", customer: "Startup Hub", amount: "$1,500", status: "Paid", date: "2025-01-09" },
-  ]
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const data = await getDashboardStats()
+        setStats({
+          totalInvoices: data.totalInvoices,
+          totalRevenue: data.totalRevenue,
+          qrCodesGenerated: data.qrCodesGenerated,
+          activeCustomers: data.activeCustomers,
+        })
+        setRecentInvoices(data.recentInvoices)
+      } catch (error) {
+        console.error("Failed to load dashboard stats", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+    }).format(amount)
+  }
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("en-ZA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -55,26 +59,113 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                <div className={`rounded-lg p-2 ${stat.bgColor}`}>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">{stat.change}</p>
-              </CardContent>
-            </Card>
-          )
-        })}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <div className={`rounded-lg p-2 bg-blue-50 dark:bg-blue-950/30`}>
+              <FileText className={`h-4 w-4 text-blue-600`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loading ? "..." : stats.totalInvoices}</div>
+            <p className="text-xs text-muted-foreground">Total invoices created</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <div className={`rounded-lg p-2 bg-green-50 dark:bg-green-950/30`}>
+              <DollarSign className={`h-4 w-4 text-green-600`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loading ? "..." : formatCurrency(stats.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">Total revenue earned</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">QR Codes Generated</CardTitle>
+            <div className={`rounded-lg p-2 bg-purple-50 dark:bg-purple-950/30`}>
+              <QrCode className={`h-4 w-4 text-purple-600`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loading ? "..." : stats.qrCodesGenerated}</div>
+            <p className="text-xs text-muted-foreground">QR codes created</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+            <div className={`rounded-lg p-2 bg-orange-50 dark:bg-orange-950/30`}>
+              <Users className={`h-4 w-4 text-orange-600`} />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{loading ? "..." : stats.activeCustomers}</div>
+            <p className="text-xs text-muted-foreground">Registered customers</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks to get started</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link href="/dashboard/invoices/create">
+              <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium">Create New Invoice</p>
+                  <p className="text-sm text-muted-foreground">Generate a new invoice for a customer</p>
+                </div>
+              </button>
+            </Link>
+
+            <Link href="/dashboard/qr-codes">
+              <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <QrCode className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium">Generate QR Code</p>
+                  <p className="text-sm text-muted-foreground">Create payment QR code</p>
+                </div>
+              </button>
+            </Link>
+
+            <Link href="/dashboard/customers">
+              <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium">View Customers</p>
+                  <p className="text-sm text-muted-foreground">Manage your customer list</p>
+                </div>
+              </button>
+            </Link>
+
+            <Link href="/dashboard/receipts">
+              <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium">View Receipts</p>
+                  <p className="text-sm text-muted-foreground">Access auto-generated receipts</p>
+                </div>
+              </button>
+            </Link>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Recent Invoices</CardTitle>
@@ -82,70 +173,38 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentInvoices.map((invoice) => (
-                <div
-                  key={invoice.id}
-                  className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">{invoice.id}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.customer}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{invoice.amount}</p>
-                    <p
-                      className={`text-xs ${
-                        invoice.status === "Paid"
-                          ? "text-green-600"
-                          : invoice.status === "Pending"
+              {loading ? (
+                <p>Loading...</p>
+              ) : recentInvoices.length === 0 ? (
+                <p>No invoices yet. <Link href="/dashboard/invoices/create" className="text-primary">Create your first invoice</Link></p>
+              ) : (
+                recentInvoices.map((invoice: any) => (
+                  <div
+                    key={invoice.id}
+                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">{invoice.invoice_number}</p>
+                      <p className="text-sm text-muted-foreground">{invoice.customer_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{formatCurrency(invoice.total_amount)}</p>
+                      <p
+                        className={`text-xs ${
+                          invoice.invoices_status === "paid"
+                            ? "text-green-600"
+                            : invoice.invoices_status === "pending"
                             ? "text-yellow-600"
                             : "text-red-600"
-                      }`}
-                    >
-                      {invoice.status}
-                    </p>
+                        }`}
+                      >
+                        {invoice.invoices_status}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks to get started</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-medium">Create New Invoice</p>
-                <p className="text-sm text-muted-foreground">Generate a new invoice for a customer</p>
-              </div>
-            </button>
-
-            <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                <QrCode className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-medium">Generate QR Code</p>
-                <p className="text-sm text-muted-foreground">Create payment QR code</p>
-              </div>
-            </button>
-
-            <button className="flex w-full items-center gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-accent">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground">
-                <Receipt className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-medium">View Receipts</p>
-                <p className="text-sm text-muted-foreground">Access auto-generated receipts</p>
-              </div>
-            </button>
           </CardContent>
         </Card>
       </div>
