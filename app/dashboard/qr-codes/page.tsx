@@ -9,7 +9,7 @@ export default function QRCodesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">QR Codes</h2>
+          <h2 className="text-3xl font-bold tracking-tight">QR Codes (WIP)</h2>
           <p className="text-muted-foreground">Generate and manage payment QR codes</p>
         </div>
         <Button className="gap-2">

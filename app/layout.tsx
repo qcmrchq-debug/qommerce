@@ -10,7 +10,6 @@ const geist = Geist({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "QOMMERCE - Invoice & QR Payment Platform",
   description: "Professional invoice generation with QR code payments",
-  generator: "v0.app",
   icons: {
     icon: [
       {

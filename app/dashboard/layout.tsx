@@ -15,7 +15,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (error || !user) {
     redirect("/login")
   }
-  // </CHANGE>
+
+  // Check if user is a vendor
+  if (user.user_metadata?.user_type !== "vendor") {
+    redirect("/login")
+  }
 
   return (
     <div className="flex h-screen flex-col">

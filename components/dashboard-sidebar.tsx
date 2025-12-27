@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Invoices", href: "/dashboard/invoices", icon: FileText },
-  { name: "QR Codes", href: "/dashboard/qr-codes", icon: QrCode },
+  { name: "QR Codes (WIP)", href: "/dashboard/qr-codes", icon: QrCode },
   { name: "Receipts", href: "/dashboard/receipts", icon: Receipt },
   { name: "Customers", href: "/dashboard/customers", icon: Users },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },

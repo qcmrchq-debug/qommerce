@@ -58,3 +58,74 @@ export function generateInvoicePDF(invoice: any) {
   // Save the PDF
   doc.save(`invoice-${invoice.invoice_number}.pdf`)
 }
+
+export function generateReceiptPDF(receipt: any) {
+  const doc = new jsPDF()
+
+  // Header
+  doc.setFontSize(20)
+  doc.text('RECEIPT', 20, 30)
+
+  doc.setFontSize(12)
+  doc.text(`Receipt Number: ${receipt.receipt_number}`, 20, 50)
+  doc.text(`Date: ${new Date(receipt.created_at).toLocaleDateString()}`, 20, 60)
+  doc.text(`Payment Date: ${new Date(receipt.payment_date).toLocaleDateString()}`, 20, 70)
+  if (receipt.payment_method) {
+    doc.text(`Payment Method: ${receipt.payment_method}`, 20, 80)
+  }
+
+  // Customer info
+  doc.text('Received From:', 20, 100)
+  doc.text(receipt.customer_name, 20, 110)
+  doc.text(receipt.customer_email, 20, 120)
+  if (receipt.customer_phone) {
+    doc.text(receipt.customer_phone, 20, 130)
+  }
+
+  // Items table
+  let y = 150
+  doc.text('Description', 20, y)
+  doc.text('Qty', 120, y)
+  doc.text('Price', 150, y)
+  doc.text('Total', 180, y)
+
+  y += 10
+  doc.line(20, y, 190, y)
+  y += 10
+
+  if (receipt.items) {
+    receipt.items.forEach((item: any) => {
+      doc.text(item.name || '', 20, y)
+      doc.text(item.quantity?.toString() || '1', 120, y)
+      doc.text(`R${item.price?.toFixed(2) || '0.00'}`, 150, y)
+      doc.text(`R${((item.quantity || 1) * (item.price || 0)).toFixed(2)}`, 180, y)
+      y += 10
+    })
+  }
+
+  y += 10
+  doc.line(20, y, 190, y)
+  y += 10
+
+  // Totals
+  doc.text(`Subtotal: R${receipt.subtotal?.toFixed(2) || '0.00'}`, 150, y)
+  y += 10
+  doc.text(`Tax: R${receipt.tax_amount?.toFixed(2) || '0.00'}`, 150, y)
+  y += 10
+  doc.setFontSize(14)
+  doc.text(`Total: R${receipt.total_amount?.toFixed(2) || '0.00'}`, 150, y + 10)
+  y += 20
+  doc.text(`Amount Paid: R${receipt.amount_paid?.toFixed(2) || '0.00'}`, 150, y)
+
+  // PAID watermark
+  doc.setFontSize(60)
+  doc.setTextColor(200, 200, 200) // Light gray
+  doc.text('PAID', 105, 150, { angle: 45 })
+
+  // Reset text color
+  doc.setTextColor(0, 0, 0)
+  doc.setFontSize(12)
+
+  // Save the PDF
+  doc.save(`receipt-${receipt.receipt_number}.pdf`)
+}

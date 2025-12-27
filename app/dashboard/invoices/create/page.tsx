@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2 } from "lucide-react"
-import { createInvoice } from "@/app/actions/invoices"
+import { createInvoice, getClients } from "@/app/actions/invoices"
 import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const itemSchema = z.object({
   name: z.string().min(1, "Item name is required"),
@@ -22,6 +23,7 @@ const itemSchema = z.object({
 })
 
 const invoiceSchema = z.object({
+  client_id: z.number().optional(),
   customer_name: z.string().min(1, "Customer name is required"),
   customer_email: z.string().email("Invalid email"),
   customer_phone: z.string().optional(),
@@ -31,8 +33,18 @@ const invoiceSchema = z.object({
 
 type InvoiceForm = z.infer<typeof invoiceSchema>
 
+interface Client {
+  id: number
+  name: string
+  email: string
+  phone: string | null
+  company: string | null
+}
+
 export default function CreateInvoicePage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<string>("manual")
   const router = useRouter()
 
   const {
@@ -40,6 +52,7 @@ export default function CreateInvoicePage() {
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<InvoiceForm>({
     resolver: zodResolver(invoiceSchema),
@@ -53,6 +66,33 @@ export default function CreateInvoicePage() {
     name: "items",
   })
 
+  useEffect(() => {
+    async function fetchClients() {
+      try {
+        const data = await getClients()
+        setClients(data)
+      } catch (error) {
+        toast.error("Failed to load clients")
+      }
+    }
+    fetchClients()
+  }, [])
+
+  const handleClientChange = (clientId: string) => {
+    setSelectedClientId(clientId)
+    if (clientId && clientId !== "manual") {
+      const client = clients.find(c => c.id.toString() === clientId)
+      if (client) {
+        setValue("client_id", client.id)
+        setValue("customer_name", client.name)
+        setValue("customer_email", client.email)
+        setValue("customer_phone", client.phone || "")
+      }
+    } else {
+      setValue("client_id", undefined)
+    }
+  }
+
   const watchedItems = watch("items")
   const subtotal = watchedItems?.reduce((sum, item) => sum + (item.quantity || 0) * (item.price || 0), 0) || 0
   const taxRate = 0.15 // 15% tax
@@ -63,10 +103,15 @@ export default function CreateInvoicePage() {
     setIsLoading(true)
     try {
       await createInvoice({
-        ...data,
+        client_id: data.client_id,
+        customer_name: data.customer_name,
+        customer_email: data.customer_email,
+        customer_phone: data.customer_phone,
+        items: watchedItems,
         subtotal,
         tax_amount: taxAmount,
         total_amount: total,
+        due_date: data.due_date,
       })
       toast.success("Invoice created successfully")
       router.push("/dashboard/invoices")
@@ -88,9 +133,25 @@ export default function CreateInvoicePage() {
         <Card>
           <CardHeader>
             <CardTitle>Customer Information</CardTitle>
-            <CardDescription>Enter the customer's details</CardDescription>
+            <CardDescription>Select an existing client or enter customer details manually</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="client">Select Client (Optional)</Label>
+              <Select value={selectedClientId} onValueChange={handleClientChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">Manual entry</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id.toString()}>
+                      {client.name} - {client.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="customer_name">Customer Name</Label>

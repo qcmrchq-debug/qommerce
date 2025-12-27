@@ -9,7 +9,9 @@ async function getVendorId(supabase: any, user: any) {
     .eq("email", user.email)
     .single()
 
-  if (error) throw error
+  if (error || !data) {
+    throw new Error("Vendor account not found. Please ensure you have completed the signup process and that the database tables have been created.")
+  }
   return data.vendor_id
 }
 

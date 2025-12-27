@@ -13,7 +13,7 @@ export default function DashboardPage() {
     qrCodesGenerated: 0,
     activeCustomers: 0,
   })
-  const [recentInvoices, setRecentInvoices] = useState([])
+  const [recentInvoices, setRecentInvoices] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

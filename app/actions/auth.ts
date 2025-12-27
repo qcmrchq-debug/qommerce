@@ -45,7 +45,7 @@ export async function signUpVendor(formData: {
   })
 
   if (dbError) {
-    console.error("[v0] Error inserting vendor:", dbError)
+    console.error(" Error inserting vendor:", dbError)
     return { error: "Failed to create vendor profile" }
   }
 
@@ -93,7 +93,7 @@ export async function signUpClient(formData: {
   })
 
   if (dbError) {
-    console.error("[v0] Error inserting client:", dbError)
+    console.error(" Error inserting client:", dbError)
     return { error: "Failed to create client profile" }
   }
 
@@ -122,7 +122,7 @@ export async function signIn(email: string, password: string, userType: "vendor"
   })
 
   if (updateError) {
-    console.error("[v0] Error updating user metadata:", updateError)
+    console.error(" Error updating user metadata:", updateError)
   }
 
   // Update last_login_at in the appropriate table
