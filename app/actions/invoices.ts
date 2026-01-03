@@ -1,32 +1,17 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getVendorId } from "@/app/actions/vendors"
 
-async function getVendorId(supabase: any, user: any) {
-  const { data, error } = await supabase
-    .from("vendors")
-    .select("vendor_id")
-    .eq("email", user.email)
-    .single()
 
-  if (error || !data) {
-    throw new Error("Vendor account not found. Please ensure you have completed the signup process and that the database tables have been created.")
-  }
-  return data.vendor_id
-}
-
-export async function getClients() {
+export async function getClients(vendorId?: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = vendorId ?? (await getVendorId())
 
   const { data, error } = await supabase
     .from("clients")
     .select("*")
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .order("name", { ascending: true })
 
   if (error) throw error
@@ -34,18 +19,14 @@ export async function getClients() {
   return data
 }
 
-export async function getInvoices() {
+export async function getInvoices(vendorId?: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = vendorId ?? (await getVendorId())
 
   const { data, error } = await supabase
     .from("invoices")
     .select("*")
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .order("created_at", { ascending: false })
 
   if (error) throw error
@@ -55,17 +36,13 @@ export async function getInvoices() {
 
 export async function deleteInvoice(invoiceId: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = await getVendorId()
 
   const { error } = await supabase
     .from("invoices")
     .delete()
     .eq("id", invoiceId)
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
 
   if (error) throw error
 }
@@ -82,31 +59,14 @@ export async function createInvoice(formData: {
   due_date?: string
 }) {
   const supabase = await createClient()
+  const id = await getVendorId()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
-
-  // Generate invoice number
-  const { data: lastInvoice } = await supabase
-    .from("invoices")
-    .select("invoice_number")
-    .eq("vendor_id", vendorId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-
-  const nextNumber = lastInvoice && lastInvoice.length > 0 
-    ? parseInt(lastInvoice[0].invoice_number.split('-')[1]) + 1 
-    : 1
-  const invoiceNumber = `INV-${nextNumber.toString().padStart(3, '0')}`
-
+  // Insert invoice and let the DB trigger generate invoice_number atomically
   const { data, error } = await supabase
     .from("invoices")
     .insert({
-      vendor_id: vendorId,
+      vendor_id: id,
       client_id: formData.client_id || null,
-      invoice_number: invoiceNumber,
       customer_name: formData.customer_name,
       customer_email: formData.customer_email,
       customer_phone: formData.customer_phone || null,
@@ -136,11 +96,7 @@ export async function updateInvoice(invoiceId: number, formData: {
   due_date?: string
 }) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = await getVendorId()
 
   const { data, error } = await supabase
     .from("invoices")
@@ -156,7 +112,7 @@ export async function updateInvoice(invoiceId: number, formData: {
       due_date: formData.due_date || null,
     })
     .eq("id", invoiceId)
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .select()
     .single()
 
@@ -167,18 +123,14 @@ export async function updateInvoice(invoiceId: number, formData: {
 
 export async function markInvoiceAsPaid(invoiceId: number, paymentMethod?: string) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = await getVendorId()
 
   // Get the invoice details
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
     .select("*")
     .eq("id", invoiceId)
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .single()
 
   if (invoiceError || !invoice) throw new Error("Invoice not found")
@@ -192,31 +144,28 @@ export async function markInvoiceAsPaid(invoiceId: number, paymentMethod?: strin
       receipt_generated: true
     })
     .eq("id", invoiceId)
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
 
   if (updateError) throw updateError
 
-  // Generate receipt number
-  const { data: lastReceipt } = await supabase
+  // Ensure only one receipt per invoice: return existing if present
+  const { data: existingReceipts } = await supabase
     .from("receipts")
-    .select("receipt_number")
-    .eq("vendor_id", vendorId)
-    .order("created_at", { ascending: false })
+    .select("*")
+    .eq("invoice_id", invoiceId)
     .limit(1)
 
-  const nextNumber = lastReceipt && lastReceipt.length > 0 
-    ? parseInt(lastReceipt[0].receipt_number.split('-')[1]) + 1 
-    : 1
-  const receiptNumber = `REC-${nextNumber.toString().padStart(3, '0')}`
+  if (existingReceipts && existingReceipts.length > 0) {
+    return { invoice, receipt: existingReceipts[0] }
+  }
 
-  // Create receipt
+  // Create receipt — receipt_number is generated by the DB trigger
   const { data: receipt, error: receiptError } = await supabase
     .from("receipts")
     .insert({
-      vendor_id: vendorId,
+      vendor_id: id,
       invoice_id: invoiceId,
       client_id: invoice.client_id,
-      receipt_number: receiptNumber,
       customer_name: invoice.customer_name,
       customer_email: invoice.customer_email,
       customer_phone: invoice.customer_phone,
@@ -232,21 +181,19 @@ export async function markInvoiceAsPaid(invoiceId: number, paymentMethod?: strin
     .select()
     .single()
 
+  if (receiptError) throw receiptError
+
   return { invoice, receipt }
 }
 
-export async function getReceipts() {
+export async function getReceipts(vendorId?: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = vendorId ?? (await getVendorId())
 
   const { data, error } = await supabase
     .from("receipts")
     .select("*")
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .order("created_at", { ascending: false })
 
   if (error) throw error
@@ -254,19 +201,15 @@ export async function getReceipts() {
   return data
 }
 
-export async function getCustomersWithInvoices() {
+export async function getCustomersWithInvoices(vendorId?: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
+  const id = vendorId ?? (await getVendorId())
 
   // Get customers for this vendor
   const { data: customers, error } = await supabase
     .from("customers")
     .select("*")
-    .eq("vendor_id", vendorId)
+    .eq("vendor_id", id)
     .order("name", { ascending: true })
 
   if (error) throw error

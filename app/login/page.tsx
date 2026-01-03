@@ -32,7 +32,12 @@ export default function LoginPage() {
       if (result.error) {
         setError(result.error)
       } else {
-        router.push("/dashboard")
+        // Redirect based on selected user type
+        if (userType === "vendor") {
+          router.push("/dashboard")
+        } else {
+          router.push("/client")
+        }
         router.refresh()
       }
     } catch (err: any) {

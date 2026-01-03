@@ -2,11 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server"
 
-async function getVendorId(supabase: any, user: any) {
+async function getVendorId(supabase: any, email: string) {
   const { data, error } = await supabase
     .from("vendors")
     .select("vendor_id")
-    .eq("email", user.email)
+    .eq("email", email)
     .single()
 
   if (error || !data) {
@@ -15,13 +15,8 @@ async function getVendorId(supabase: any, user: any) {
   return data.vendor_id
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(vendorId: number) {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error("Unauthorized")
-
-  const vendorId = await getVendorId(supabase, user)
 
   // Get invoice stats
   const { data: invoices } = await supabase
@@ -46,6 +41,7 @@ export async function getDashboardStats() {
   const { data: clients } = await supabase
     .from("clients")
     .select("id")
+    .eq("vendor_id", vendorId)
 
   const activeCustomers = clients?.length || 0
 
