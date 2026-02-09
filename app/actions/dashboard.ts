@@ -28,14 +28,14 @@ export async function getDashboardStats(vendorId: number) {
   const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
   const paidInvoices = invoices?.filter(inv => inv.invoices_status === 'paid').length || 0
 
-  // Get QR codes count (assuming products with qr_code_url)
-  const { data: products } = await supabase
-    .from("products")
+  // Get QR codes count (invoices with qr_code_url)
+  const { data: invoicesWithQR } = await supabase
+    .from("invoices")
     .select("id")
     .eq("vendor_id", vendorId)
     .not("qr_code_url", "is", null)
 
-  const qrCodesGenerated = products?.length || 0
+  const qrCodesGenerated = invoicesWithQR?.length || 0
 
   // Get customers count (clients)
   const { data: clients } = await supabase

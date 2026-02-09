@@ -29,8 +29,10 @@ import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from "next/link"
+import { formatCurrency, formatDate } from "@/lib/utils"
 import { Plus, Search, MoreVertical, Download, Eye, Edit, Trash2, FileText, CheckCircle } from "lucide-react"
 import { deleteInvoice, markInvoiceAsPaid, updateInvoice } from "@/app/actions/invoices"
+import { confirmManualPayment } from "@/app/actions/payments"
 import { generateInvoicePDF, generateReceiptPDF } from "@/lib/pdf"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -114,30 +116,17 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       paid: "default",
       pending: "secondary",
+      payment_pending: "secondary",
       overdue: "destructive",
       draft: "outline",
     }
+    const label = status === "payment_pending" ? "Payment Pending" : status
 
     return (
       <Badge variant={variants[status] || "outline"} className="capitalize">
-        {status}
+        {label.replace("_", " ")}
       </Badge>
     )
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
   }
 
   const handleEditInvoice = (invoice: Invoice) => {
@@ -208,14 +197,35 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
     }
   }
 
+  const handleConfirmManualPayment = async (invoice: Invoice) => {
+    if (confirm("Confirm that you have received payment for this invoice? This will generate a receipt.")) {
+      try {
+        const result = await confirmManualPayment(invoice.id)
+        if (!result.success) {
+          toast.error(result.error || "Failed to confirm payment")
+          return
+        }
+        setInvoices(invoices.map(inv =>
+          inv.id === invoice.id ? { ...inv, invoices_status: "paid" as const } : inv
+        ))
+        if (result.receipt) {
+          generateReceiptPDF(result.receipt)
+        }
+        toast.success("Payment confirmed and receipt generated")
+      } catch {
+        toast.error("Failed to confirm payment")
+      }
+    }
+  }
+
   const handleMarkAsPaid = async (invoice: Invoice) => {
     if (confirm("Are you sure you want to mark this invoice as paid? This will generate a receipt.")) {
       try {
         const result = await markInvoiceAsPaid(invoice.id)
 
         // Update the invoice status in local state
-        setInvoices(invoices.map(inv => 
-          inv.id === invoice.id 
+        setInvoices(invoices.map(inv =>
+          inv.id === invoice.id
             ? { ...inv, invoices_status: "paid", receipt_generated: true }
             : inv
         ))
@@ -245,7 +255,7 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Total Invoices</CardDescription>
@@ -265,6 +275,14 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
             <CardDescription>Pending</CardDescription>
             <CardTitle className="text-3xl text-yellow-600">
               {invoices.filter((i) => i.invoices_status === "pending").length}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Payment Pending</CardDescription>
+            <CardTitle className="text-3xl text-amber-600">
+              {invoices.filter((i) => i.invoices_status === "payment_pending").length}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -312,8 +330,22 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
             <TableBody>
               {invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No invoices found
+                  <TableCell colSpan={7} className="p-0">
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+                        <FileText className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm font-medium mb-1">No invoices found</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Get started by creating your first invoice.
+                      </p>
+                      <Button asChild size="sm">
+                        <Link href="/dashboard/invoices/create">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Invoice
+                        </Link>
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -356,7 +388,13 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
                             <Download className="mr-2 h-4 w-4" />
                             Download PDF
                           </DropdownMenuItem>
-                          {invoice.invoices_status !== "paid" && (
+                          {invoice.invoices_status === "payment_pending" && (
+                            <DropdownMenuItem onClick={() => handleConfirmManualPayment(invoice)}>
+                              <CheckCircle className="mr-2 h-4 w-4" />
+                              Confirm Payment
+                            </DropdownMenuItem>
+                          )}
+                          {invoice.invoices_status !== "paid" && invoice.invoices_status !== "payment_pending" && (
                             <DropdownMenuItem onClick={() => handleMarkAsPaid(invoice)}>
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Mark as Paid

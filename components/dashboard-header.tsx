@@ -24,9 +24,10 @@ interface DashboardHeaderProps {
       user_type?: string
     }
   }
+  mobileMenu?: React.ReactNode
 }
 
-export function DashboardHeader({ user }: DashboardHeaderProps) {
+export function DashboardHeader({ user, mobileMenu }: DashboardHeaderProps) {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
 
@@ -57,14 +58,18 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-3">
+          {mobileMenu}
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Receipt className="h-5 w-5" />
           </div>
-          <div>
+          <div className="hidden sm:block">
             <h1 className="text-lg font-semibold tracking-tight">QOMMERCE</h1>
             <p className="text-xs text-muted-foreground">Invoice Management</p>
+          </div>
+          <div className="sm:hidden">
+            <h1 className="text-lg font-semibold tracking-tight">QOMMERCE</h1>
           </div>
         </div>
 

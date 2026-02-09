@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { getVendorId } from "@/app/actions/vendors"
-import InvoiceDetails from "./InvoiceDetails"
+import InvoiceDetails from "@/components/invoices/InvoiceDetails"
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
@@ -41,5 +41,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     // If product lookup fails, fall back to existing items
   }
 
-  return <InvoiceDetails invoice={invoice} />
+  return (
+    <div className="p-6">
+      <InvoiceDetails invoice={invoice} userType="vendor" showDownloadButton={true} />
+    </div>
+  )
 }

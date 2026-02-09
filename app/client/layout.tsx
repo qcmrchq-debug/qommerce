@@ -3,7 +3,7 @@ import type React from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { ClientSidebar } from "@/components/client-sidebar"
+import { ClientSidebar, ClientMobileMenu } from "@/components/client-sidebar"
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -35,7 +35,7 @@ export default async function ClientLayout({ children }: { children: React.React
 
   return (
     <div className="flex h-screen flex-col">
-      <DashboardHeader user={user} />
+      <DashboardHeader user={user} mobileMenu={<ClientMobileMenu />} />
       <div className="flex flex-1 overflow-hidden">
         <ClientSidebar />
         <main className="flex-1 overflow-y-auto bg-muted/30">{children}</main>

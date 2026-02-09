@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import InvoiceDetails from "@/app/dashboard/invoices/[id]/InvoiceDetails"
+import InvoiceDetails from "@/components/invoices/InvoiceDetails"
 import { getClientInvoiceById } from "@/app/actions/clients"
 
 interface Props {
@@ -16,7 +16,7 @@ export default async function ClientInvoicePage({ params }: Props) {
 
   return (
     <div className="p-6">
-      <InvoiceDetails invoice={invoice} />
+      <InvoiceDetails invoice={invoice} userType="client" showDownloadButton={true} />
     </div>
   )
 }

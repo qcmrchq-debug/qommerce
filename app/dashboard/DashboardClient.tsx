@@ -3,15 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, QrCode, Receipt, DollarSign, Users } from "lucide-react"
 import Link from "next/link"
+import { formatCurrency } from "@/lib/utils"
 
 export default function DashboardClient({ stats }: { stats: any }) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-ZA", {
-      style: "currency",
-      currency: "ZAR",
-    }).format(amount)
-  }
-
   return (
     <div className="space-y-6 p-6">
       <div>

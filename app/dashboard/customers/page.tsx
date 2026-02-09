@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import { formatCurrency, formatDate } from "@/lib/utils"
 import { Search, MoreVertical, Users, Mail, Phone, Building, FileText, Receipt } from "lucide-react"
 import { getCustomersWithInvoices } from "@/app/actions/invoices"
 import { toast } from "sonner"
@@ -66,14 +67,6 @@ export default function CustomersPage() {
       (customer.company && customer.company.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
-
   const getTotalInvoices = (customer: Customer) => {
     return customer.invoice_count
   }
@@ -84,13 +77,6 @@ export default function CustomersPage() {
 
   const getTotalSpent = (customer: Customer) => {
     return customer.total_spent
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
   }
 
   return (

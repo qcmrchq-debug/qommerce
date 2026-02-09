@@ -116,9 +116,47 @@ export async function signIn(email: string, password: string, userType: "vendor"
     return { error: "Failed to sign in" }
   }
 
-  // Update user metadata with user type
+  // Validate user type against database records
+  const { data: vendorRow } = await supabase
+    .from("vendors")
+    .select("vendor_id")
+    .eq("email", email)
+    .maybeSingle()
+
+  const { data: clientRow } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle()
+
+  const isVendor = !!vendorRow?.vendor_id
+  const isClient = !!clientRow?.id
+
+  // Determine actual user type from database
+  let actualUserType: "vendor" | "client" | null = null
+  if (isVendor && !isClient) {
+    actualUserType = "vendor"
+  } else if (isClient && !isVendor) {
+    actualUserType = "client"
+  } else if (isVendor && isClient) {
+    // User exists in both tables - prioritize vendor
+    actualUserType = "vendor"
+  }
+
+  if (!actualUserType) {
+    return { error: "Account not found. Please ensure you have completed the signup process." }
+  }
+
+  // Verify selected user type matches actual user type
+  if (userType !== actualUserType) {
+    return { 
+      error: `This account is registered as a ${actualUserType}. Please select the correct account type.` 
+    }
+  }
+
+  // Update user metadata with validated user type
   const { error: updateError } = await supabase.auth.updateUser({
-    data: { user_type: userType },
+    data: { user_type: actualUserType },
   })
 
   if (updateError) {
@@ -126,13 +164,13 @@ export async function signIn(email: string, password: string, userType: "vendor"
   }
 
   // Update last_login_at in the appropriate table
-  if (userType === "vendor") {
+  if (actualUserType === "vendor") {
     await supabase.from("vendors").update({ last_login_at: new Date().toISOString() }).eq("email", email)
   } else {
     await supabase.from("clients").update({ last_login_at: new Date().toISOString() }).eq("email", email)
   }
 
-  return { success: true }
+  return { success: true, userType: actualUserType }
 }
 
 export async function signOut() {

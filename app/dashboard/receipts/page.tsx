@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
+import { formatCurrency, formatDate } from "@/lib/utils"
 import { Search, MoreVertical, Download, Receipt, FileText } from "lucide-react"
 import { getReceipts } from "@/app/actions/invoices"
 import { generateReceiptPDF } from "@/lib/pdf"
@@ -58,21 +59,6 @@ export default function ReceiptsPage() {
       receipt.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       receipt.customer_email.toLowerCase().includes(searchQuery.toLowerCase()),
   )
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
 
   return (
     <div className="space-y-6 p-6">

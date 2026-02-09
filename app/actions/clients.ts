@@ -28,8 +28,8 @@ export async function getClientContext(): Promise<ClientContext> {
     .maybeSingle()
 
   if (vendorError) {
-    // If there's an error fetching vendor, propagate as an Error instance
-    throw new Error(vendorError.message || String(vendorError))
+    console.error("Error checking vendor status:", vendorError)
+    throw new Error("Failed to verify account type. Please try again.")
   }
 
   if (vendorRow && vendorRow.vendor_id) {
@@ -44,8 +44,8 @@ export async function getClientContext(): Promise<ClientContext> {
     .maybeSingle()
 
   if (clientError) {
-    // If there's an unexpected error, throw as an Error instance
-    throw new Error(clientError.message || String(clientError))
+    console.error("Error fetching client:", clientError)
+    throw new Error("Failed to load client information. Please try again.")
   }
 
   return {
@@ -72,9 +72,12 @@ export async function getClientInvoices() {
 
   const { data, error } = await query.order("created_at", { ascending: false })
 
-  if (error) throw new Error(error.message || String(error))
+  if (error) {
+    console.error("Error fetching client invoices:", error)
+    throw new Error("Failed to load invoices. Please try again.")
+  }
 
-  return data
+  return data || []
 }
 
 export async function getClientReceipts() {
@@ -93,9 +96,12 @@ export async function getClientReceipts() {
 
   const { data, error } = await query.order("created_at", { ascending: false })
 
-  if (error) throw new Error(error.message || String(error))
+  if (error) {
+    console.error("Error fetching client receipts:", error)
+    throw new Error("Failed to load receipts. Please try again.")
+  }
 
-  return data
+  return data || []
 }
 
 export async function getClientUnpaidInvoices() {
@@ -116,32 +122,58 @@ export async function getClientUnpaidInvoices() {
 
   const { data, error } = await query.order("created_at", { ascending: false })
 
-  if (error) throw new Error(error.message || String(error))
+  if (error) {
+    console.error("Error fetching unpaid invoices:", error)
+    throw new Error("Failed to load unpaid invoices. Please try again.")
+  }
 
-  return data
+  return data || []
 }
 
 export async function getClientInvoiceById(invoiceId: number) {
-  const supabase = await createClient()
-  const ctx = await getClientContext()
+  try {
+    const supabase = await createClient()
+    const ctx = await getClientContext()
 
-  const { client_id, email } = ctx
+    const { client_id, email } = ctx
 
-  // Fetch invoice by id and ensure ownership
-  const { data: invoice, error } = await supabase
-    .from("invoices")
-    .select("*")
-    .eq("id", invoiceId)
-    .maybeSingle()
+    // Fetch invoice by id with vendor_id to ensure proper access control
+    const { data: invoice, error } = await supabase
+      .from("invoices")
+      .select("*, vendor_id")
+      .eq("id", invoiceId)
+      .maybeSingle()
 
-  if (error) throw new Error(error.message || String(error))
-  if (!invoice) return null
+    if (error) {
+      console.error("Error fetching invoice:", error)
+      throw new Error("Failed to load invoice. Please try again.")
+    }
 
-  const owns = (client_id && invoice.client_id === client_id) || invoice.customer_email === email
+    if (!invoice) {
+      return null
+    }
 
-  if (!owns) return null
+    // Verify ownership: must match client_id OR customer_email, AND must be from a valid vendor
+    const owns = (client_id && invoice.client_id === client_id) || invoice.customer_email === email
 
-  return invoice
+    if (!owns) {
+      // Don't reveal that invoice exists if user doesn't own it
+      return null
+    }
+
+    // Additional security: verify vendor_id exists (prevents access to invoices from deleted vendors)
+    if (!invoice.vendor_id) {
+      console.error("Invoice has no vendor_id:", invoiceId)
+      return null
+    }
+
+    return invoice
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error("An unexpected error occurred while loading the invoice.")
+  }
 }
 
 export async function getClientPaidInvoices() {
@@ -158,8 +190,11 @@ export async function getClientPaidInvoices() {
   }
 
   const { data, error } = await query.order("created_at", { ascending: false })
-  if (error) throw new Error(error.message || String(error))
-  return data
+  if (error) {
+    console.error("Error fetching paid invoices:", error)
+    throw new Error("Failed to load paid invoices. Please try again.")
+  }
+  return data || []
 }
 
 export async function updateClientProfile(formData: { name: string; company?: string; phone?: string }) {
@@ -182,7 +217,10 @@ export async function updateClientProfile(formData: { name: string; company?: st
       .select()
       .single()
 
-    if (error) throw new Error(error.message || String(error))
+    if (error) {
+      console.error("Error updating client profile:", error)
+      throw new Error("Failed to update profile. Please try again.")
+    }
     return data
   } else {
     // Try update by email first
@@ -194,7 +232,8 @@ export async function updateClientProfile(formData: { name: string; company?: st
       .single()
 
     if (updateError && updateError.code !== "PGRST116") {
-      throw new Error(updateError.message || String(updateError))
+      console.error("Error updating client by email:", updateError)
+      throw new Error("Failed to update profile. Please try again.")
     }
 
     if (updated) return updated
@@ -206,7 +245,10 @@ export async function updateClientProfile(formData: { name: string; company?: st
       .select()
       .single()
 
-    if (insertError) throw new Error(insertError.message || String(insertError))
+    if (insertError) {
+      console.error("Error creating client profile:", insertError)
+      throw new Error("Failed to create profile. Please try again.")
+    }
     return inserted
   }
 }
