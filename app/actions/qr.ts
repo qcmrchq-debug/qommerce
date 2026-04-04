@@ -25,19 +25,33 @@ export async function getOrCreateInvoiceQRCode(invoiceId: number): Promise<strin
 
   const { data: invoice, error } = await supabase
     .from("invoices")
-    .select("id, qr_code_url, vendor_id")
+    .select("id, qr_code_url, payment_url, vendor_id")
     .eq("id", invoiceId)
     .eq("vendor_id", vendorId)
     .single()
 
   if (error || !invoice) return null
 
-  if (invoice.qr_code_url) {
+  const baseUrl = getBaseUrl()
+  const payUrl = `${baseUrl}/client/pay/${invoiceId}`
+
+  if (invoice.qr_code_url && invoice.payment_url === payUrl) {
     return invoice.qr_code_url
   }
 
-  const baseUrl = getBaseUrl()
-  const payUrl = `${baseUrl}/client/pay/${invoiceId}`
+  if (invoice.qr_code_url && invoice.payment_url !== payUrl) {
+    const { error: updateError } = await supabase
+      .from("invoices")
+      .update({ payment_url: payUrl })
+      .eq("id", invoiceId)
+      .eq("vendor_id", vendorId)
+
+    if (updateError) {
+      console.error("Error persisting payment URL:", updateError)
+    }
+
+    return invoice.qr_code_url
+  }
 
   try {
     const dataUrl = await QRCode.toDataURL(payUrl, {
@@ -48,12 +62,12 @@ export async function getOrCreateInvoiceQRCode(invoiceId: number): Promise<strin
 
     const { error: updateError } = await supabase
       .from("invoices")
-      .update({ qr_code_url: dataUrl })
+      .update({ qr_code_url: dataUrl, payment_url: payUrl })
       .eq("id", invoiceId)
       .eq("vendor_id", vendorId)
 
     if (updateError) {
-      console.error("Error persisting QR code:", updateError)
+      console.error("Error persisting QR code and payment URL:", updateError)
       return dataUrl
     }
     return dataUrl

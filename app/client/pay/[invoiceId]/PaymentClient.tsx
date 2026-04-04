@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { formatCurrency } from "@/lib/utils"
-import { initiatePayment, type PaymentMethod } from "@/app/actions/payments"
+import { buildPayFastPaymentData } from "@/app/actions/payfast"
 import { toast } from "sonner"
 import { Loader2, CreditCard, Building2 } from "lucide-react"
 import Link from "next/link"
@@ -24,15 +24,34 @@ interface PaymentClientProps {
     subtotal: number
     tax_amount: number
     invoices_status: string
+    vendors?: {
+      banking_details?: {
+        bank_name?: string | null
+        account_number?: string | null
+        branch_code?: string | null
+        account_holder?: string | null
+      } | null
+    } | null
   }
 }
 
-const MANUAL_INSTRUCTIONS = `Bank Transfer / Mobile Money
+type PayMethod = "manual" | "payfast"
+
+export default function PaymentClient({ invoice }: PaymentClientProps) {
+  const router = useRouter()
+  const [paymentMethod, setPaymentMethod] = useState<PayMethod>("manual")
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [manualInitiated, setManualInitiated] = useState(false)
+
+  const bankDetails = invoice.vendors?.banking_details
+  const manualInstructions = bankDetails
+    ? `Bank Transfer / Mobile Money
 
 1. Transfer the invoice amount to:
-   Bank: Standard Bank
-   Account: 1234567890
-   Branch: 051001
+   Bank: ${bankDetails.bank_name || "N/A"}
+   Account: ${bankDetails.account_number || "N/A"}
+   Branch: ${bankDetails.branch_code || "N/A"}
+   Account Holder: ${bankDetails.account_holder || "N/A"}
    Reference: [Your invoice number]
 
 2. Email proof of payment to your vendor.
@@ -40,36 +59,40 @@ const MANUAL_INSTRUCTIONS = `Bank Transfer / Mobile Money
 3. Your vendor will confirm receipt and mark the invoice as paid.
 
 You will receive a receipt once payment is confirmed.`
+    : "This vendor has not set up banking details yet."
 
-export default function PaymentClient({ invoice }: PaymentClientProps) {
-  const router = useRouter()
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("manual")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [manualInitiated, setManualInitiated] = useState(false)
+  const submitPayFastForm = (actionUrl: string, formData: Record<string, string>) => {
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = actionUrl
+    form.style.display = "none"
+
+    Object.entries(formData).forEach(([key, value]) => {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = key
+      input.value = value
+      form.appendChild(input)
+    })
+
+    document.body.appendChild(form)
+    form.submit()
+  }
 
   const handlePayment = async () => {
     setIsProcessing(true)
 
     try {
-      const result = await initiatePayment(invoice.id, paymentMethod)
-
-      if (!result.success) {
-        toast.error(result.error)
-        setIsProcessing(false)
+      if (paymentMethod === "payfast") {
+        const result = await buildPayFastPaymentData(invoice.id)
+        submitPayFastForm(result.payfastUrl, result.formData)
         return
       }
 
-      if (paymentMethod === "stripe" && result.redirectUrl) {
-        window.location.href = result.redirectUrl
-        return
-      }
-
-      if (paymentMethod === "manual") {
-        setManualInitiated(true)
-        toast.success("Payment initiated. Follow the instructions below.")
-      }
+      setManualInitiated(true)
+      toast.success("Payment initiated. Follow the instructions below.")
     } catch (error) {
-      toast.error("Failed to initiate payment. Please try again.")
+      toast.error(error instanceof Error ? error.message : "Failed to initiate payment. Please try again.")
     } finally {
       setIsProcessing(false)
     }
@@ -87,7 +110,7 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted p-4 whitespace-pre-wrap text-sm font-mono">
-              {MANUAL_INSTRUCTIONS}
+              {manualInstructions}
             </div>
             <p className="text-sm text-muted-foreground">
               Your invoice is marked as payment pending. You will receive a receipt once your vendor confirms payment.
@@ -147,7 +170,7 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
             <CardDescription>Select how you would like to pay</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
+            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PayMethod)}>
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                 <RadioGroupItem value="manual" id="manual" />
                 <Label htmlFor="manual" className="flex-1 cursor-pointer">
@@ -162,18 +185,50 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
               </div>
 
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
-                <RadioGroupItem value="stripe" id="stripe" />
-                <Label htmlFor="stripe" className="flex-1 cursor-pointer">
+                <RadioGroupItem value="payfast" id="payfast" />
+                <Label htmlFor="payfast" className="flex-1 cursor-pointer">
                   <div className="flex items-center gap-2">
                     <CreditCard className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Card (Stripe)</div>
-                      <div className="text-sm text-muted-foreground">Visa, Mastercard</div>
+                      <div className="font-medium">Pay via PayFast</div>
+                      <div className="text-sm text-muted-foreground">Redirect to PayFast to complete payment</div>
                     </div>
                   </div>
                 </Label>
               </div>
             </RadioGroup>
+
+            {paymentMethod === "manual" && (
+              <div className="rounded-lg border border-muted/50 bg-muted p-4 text-sm">
+                {bankDetails ? (
+                  <div className="space-y-2">
+                    <p className="font-medium">Banking details for this vendor:</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-muted-foreground">Bank Name</Label>
+                        <p className="font-medium">{bankDetails.bank_name || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Account Number</Label>
+                        <p className="font-medium">{bankDetails.account_number || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Branch Code</Label>
+                        <p className="font-medium">{bankDetails.branch_code || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Account Holder</Label>
+                        <p className="font-medium">{bankDetails.account_holder || "-"}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    This vendor has not set up banking details yet.
+                  </p>
+                )}
+              </div>
+            )}
 
             <Button
               onClick={handlePayment}
@@ -186,8 +241,8 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processing...
                 </>
-              ) : paymentMethod === "stripe" ? (
-                `Pay ${formatCurrency(invoice.total_amount)} with Card`
+              ) : paymentMethod === "payfast" ? (
+                `Pay ${formatCurrency(invoice.total_amount)} with PayFast`
               ) : (
                 `Initiate Manual Payment`
               )}

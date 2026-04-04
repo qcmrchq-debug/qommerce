@@ -34,7 +34,9 @@ export async function getVendorProfile() {
 
     const { data, error } = await supabase
       .from("vendors")
-      .select("*")
+      .select(
+        "vendor_id, name, email, phone, country, currency, payfast_merchant_id, payfast_merchant_key, payfast_connected, banking_details, last_login_at, created_at, updated_at"
+      )
       .eq("vendor_id", vendorId)
       .single()
 
@@ -86,5 +88,45 @@ export async function updateVendorProfile(formData: {
       throw error
     }
     throw new Error("An unexpected error occurred while updating profile.")
+  }
+}
+
+export async function updateVendorBankingDetails(formData: {
+  bank_name: string
+  account_number: string
+  branch_code: string
+  account_holder: string
+}) {
+  try {
+    const supabase = await createClient()
+    const vendorId = await getVendorId()
+
+    const payload = {
+      banking_details: {
+        bank_name: formData.bank_name,
+        account_number: formData.account_number,
+        branch_code: formData.branch_code,
+        account_holder: formData.account_holder,
+      },
+    }
+
+    const { data, error } = await supabase
+      .from("vendors")
+      .update(payload)
+      .eq("vendor_id", vendorId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error updating vendor banking details:", error)
+      throw new Error("Failed to update banking details. Please try again.")
+    }
+
+    return { success: true, data }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error("An unexpected error occurred while updating banking details.")
   }
 }

@@ -209,31 +209,78 @@ export async function getReceipts(vendorId?: number) {
   }
 }
 
-export async function getCustomersWithInvoices(vendorId?: number) {
-  const supabase = await createClient()
-  const id = vendorId ?? (await getVendorId())
+export type CustomerSummary = {
+  customer_name: string
+  customer_email: string
+  total_outstanding: number
+  total_paid: number
+  invoice_count: number
+  unpaid_count: number
+  most_overdue_days: number
+  currency: string
+}
 
-  // Get customers for this vendor
-  const { data: customers, error } = await supabase
-    .from("customers")
-    .select("*")
-    .eq("vendor_id", id)
-    .order("name", { ascending: true })
+export async function getCustomerSummaries(vendorId?: number) {
+  try {
+    const supabase = await createClient()
+    const id = vendorId ?? (await getVendorId())
 
-  if (error) {
-    console.error("Error fetching customers:", error)
-    throw new Error("Failed to load customers. Please try again.")
+    const { data: invoices, error } = await supabase
+      .from("invoices")
+      .select("customer_name, customer_email, total_amount, due_date, currency, invoices_status")
+      .eq("vendor_id", id)
+
+    if (error) {
+      console.error("Error fetching invoices for customer summaries:", error)
+      throw new Error("Failed to load customer summaries. Please try again.")
+    }
+
+    const today = new Date()
+
+    const summaries = invoices?.reduce<Record<string, CustomerSummary>>((acc, invoice) => {
+      if (!invoice.customer_email) {
+        return acc
+      }
+
+      const email = invoice.customer_email.toLowerCase()
+      const isPaid = invoice.invoices_status === "paid"
+      const isUnpaid = !isPaid
+      const invoiceAmount = Number(invoice.total_amount) || 0
+      const overdueDays = invoice.due_date
+        ? Math.max(
+            0,
+            Math.floor((today.getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24)),
+          )
+        : 0
+      const overdueValue = isUnpaid ? overdueDays : 0
+
+      if (!acc[email]) {
+        acc[email] = {
+          customer_name: invoice.customer_name || invoice.customer_email,
+          customer_email: invoice.customer_email,
+          total_outstanding: isUnpaid ? invoiceAmount : 0,
+          total_paid: isPaid ? invoiceAmount : 0,
+          invoice_count: 1,
+          unpaid_count: isUnpaid ? 1 : 0,
+          most_overdue_days: Math.max(0, overdueValue),
+          currency: invoice.currency || "ZAR",
+        }
+      } else {
+        acc[email].total_outstanding += isUnpaid ? invoiceAmount : 0
+        acc[email].total_paid += isPaid ? invoiceAmount : 0
+        acc[email].invoice_count += 1
+        acc[email].unpaid_count += isUnpaid ? 1 : 0
+        acc[email].most_overdue_days = Math.max(acc[email].most_overdue_days, overdueValue)
+      }
+
+      return acc
+    }, {})
+
+    return Object.values(summaries)
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error("An unexpected error occurred while loading customer summaries.")
   }
-
-  // For each customer, we could potentially link to clients/invoices
-  // but since there's no direct relationship, we'll return all customers
-  // with placeholder stats for now
-  const customersWithStats = customers.map(customer => ({
-    ...customer,
-    invoice_count: 0, // Placeholder - would need proper linking
-    receipt_count: 0, // Placeholder - would need proper linking
-    total_spent: 0,   // Placeholder - would need proper linking
-  }))
-
-  return customersWithStats
 }

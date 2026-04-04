@@ -22,9 +22,16 @@ interface Invoice {
 
 function QRCell({ invoiceId }: { invoiceId: number }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null)
+  const [paymentUrl, setPaymentUrl] = useState<string>("")
 
   useEffect(() => {
     getOrCreateInvoiceQRCode(invoiceId).then(setDataUrl)
+
+    const storedBaseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "")
+    const resolvedBaseUrl = storedBaseUrl || (typeof window !== "undefined" ? window.location.origin : "")
+    if (resolvedBaseUrl) {
+      setPaymentUrl(`${resolvedBaseUrl}/client/pay/${invoiceId}`)
+    }
   }, [invoiceId])
 
   const handleDownload = () => {
@@ -42,12 +49,22 @@ function QRCell({ invoiceId }: { invoiceId: number }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <img src={dataUrl} alt="QR Code" className="h-20 w-20 rounded border object-contain" />
-      <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1">
-        <Download className="h-4 w-4" />
-        Download
-      </Button>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <img src={dataUrl} alt="QR Code" className="h-20 w-20 rounded border object-contain" />
+        <Button variant="outline" size="sm" onClick={handleDownload} className="gap-1 w-full sm:w-auto">
+          <Download className="h-4 w-4" />
+          Download
+        </Button>
+      </div>
+      {paymentUrl ? (
+        <div className="text-sm text-muted-foreground break-all">
+          <div className="font-medium">Payment URL</div>
+          <a href={paymentUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+            {paymentUrl}
+          </a>
+        </div>
+      ) : null}
     </div>
   )
 }

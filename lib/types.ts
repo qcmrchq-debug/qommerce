@@ -23,6 +23,12 @@ export interface Invoice {
   receipt_generated: boolean
   workflow_status: string | null
   paid_at: string | null
+  vendors?: {
+    name: string
+    email: string
+    phone: string | null
+    country: string
+  }
 }
 
 export interface InvoiceItem {
@@ -76,6 +82,10 @@ export interface Vendor {
   password_hash: string
   country: string
   currency: string
+  payfast_merchant_id?: string | null
+  payfast_merchant_key?: string | null
+  payfast_passphrase_enc?: string | null
+  payfast_connected?: boolean | null
   last_login_at: string | null
   created_at: string
   updated_at: string

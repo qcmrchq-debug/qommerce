@@ -194,10 +194,11 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
           </CardHeader>
           <CardContent className="space-y-4">
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-12 gap-4 items-end">
-                <div className="col-span-3">
+              <div key={field.id} className="grid gap-4 sm:grid-cols-12 items-end rounded-lg border border-muted/50 p-4">
+                <div className="col-span-12 sm:col-span-3">
                   <Label>Item Name</Label>
                   <Input
+                    className="min-w-0 w-full"
                     {...register(`items.${index}.name`)}
                     placeholder="Item name"
                   />
@@ -205,16 +206,18 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                     <p className="text-sm text-destructive">{errors.items[index].name.message}</p>
                   )}
                 </div>
-                <div className="col-span-3">
+                <div className="col-span-12 sm:col-span-3">
                   <Label>Description (Optional)</Label>
                   <Input
+                    className="min-w-0 w-full"
                     {...register(`items.${index}.description`)}
                     placeholder="Description"
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-12 sm:col-span-2">
                   <Label>Qty</Label>
                   <Input
+                    className="min-w-0 w-full h-10 text-base"
                     type="number"
                     {...register(`items.${index}.quantity`, { valueAsNumber: true })}
                     placeholder="1"
@@ -223,9 +226,10 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                     <p className="text-sm text-destructive">{errors.items[index].quantity.message}</p>
                   )}
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-12 sm:col-span-2">
                   <Label>Price</Label>
                   <Input
+                    className="min-w-0 w-full h-10 text-base"
                     type="number"
                     step="0.01"
                     {...register(`items.${index}.price`, { valueAsNumber: true })}
@@ -235,14 +239,15 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                     <p className="text-sm text-destructive">{errors.items[index].price.message}</p>
                   )}
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-12 sm:col-span-1">
                   <Label>Total</Label>
                   <Input
+                    className="min-w-0 w-full"
                     value={((watchedItems?.[index]?.quantity || 0) * (watchedItems?.[index]?.price || 0)).toFixed(2)}
                     readOnly
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-12 sm:col-span-1 flex items-end">
                   <Button
                     type="button"
                     variant="outline"

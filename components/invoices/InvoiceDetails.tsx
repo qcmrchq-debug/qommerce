@@ -82,10 +82,10 @@ export default function InvoiceDetails({
               <CardTitle className="text-2xl">Invoice {invoice.invoice_number}</CardTitle>
               <CardDescription>Created: {formatDate(invoice.created_at)}</CardDescription>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center justify-end">
               {getStatusBadge()}
               {canPay && (
-                <Button size="sm" className="gap-2" asChild>
+                <Button size="sm" className="gap-2 w-full sm:w-auto" asChild>
                   <Link href={`/client/pay/${invoice.id}`}>
                     Pay Invoice
                   </Link>
@@ -96,7 +96,7 @@ export default function InvoiceDetails({
                   variant="outline"
                   size="sm"
                   onClick={() => generateInvoicePDF(invoice)}
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4" />
                   Download PDF
@@ -108,6 +108,19 @@ export default function InvoiceDetails({
         <CardContent className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div>
+              <h3 className="text-sm font-medium text-muted-foreground mb-2">From</h3>
+              <div className="space-y-1">
+                <p className="font-medium">{invoice.vendors?.name || "Vendor"}</p>
+                {invoice.vendors?.email && (
+                  <p className="text-sm text-muted-foreground">{invoice.vendors.email}</p>
+                )}
+                {invoice.vendors?.phone && (
+                  <p className="text-sm text-muted-foreground">{invoice.vendors.phone}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="text-right">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Bill To</h3>
               <div className="space-y-1">
                 <p className="font-medium">{invoice.customer_name}</p>
@@ -117,7 +130,8 @@ export default function InvoiceDetails({
                 )}
               </div>
             </div>
-
+          </div>
+          <div className="border-t border-muted/50 pt-4">
             <div className="text-right">
               <h3 className="text-sm font-medium text-muted-foreground mb-2">Invoice Details</h3>
               <div className="space-y-1">

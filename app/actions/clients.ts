@@ -21,18 +21,19 @@ export async function getClientContext(): Promise<ClientContext> {
   }
 
   // If a vendor row exists for this email, this is not a client
-  const { data: vendorRow, error: vendorError } = await supabase
-    .from("vendors")
-    .select("vendor_id")
-    .eq("email", user.email)
-    .maybeSingle()
-
-  if (vendorError) {
-    console.error("Error checking vendor status:", vendorError)
-    throw new Error("Failed to verify account type. Please try again.")
+  let isVendor = false
+  try {
+    const { data: vendorRow } = await supabase
+      .from("vendors")
+      .select("vendor_id")
+      .eq("email", user.email)
+      .maybeSingle()
+    isVendor = !!(vendorRow?.vendor_id)
+  } catch {
+    isVendor = false
   }
 
-  if (vendorRow && vendorRow.vendor_id) {
+  if (isVendor) {
     throw new Error("User is a vendor")
   }
 
@@ -140,7 +141,7 @@ export async function getClientInvoiceById(invoiceId: number) {
     // Fetch invoice by id with vendor_id to ensure proper access control
     const { data: invoice, error } = await supabase
       .from("invoices")
-      .select("*, vendor_id")
+      .select("*, vendor_id, vendors!inner(name, email, phone, country, banking_details)")
       .eq("id", invoiceId)
       .maybeSingle()
 

@@ -298,18 +298,18 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap gap-2 items-center justify-between">
             <div>
               <CardTitle>All Invoices</CardTitle>
               <CardDescription>A list of all your invoices and their status</CardDescription>
             </div>
-            <div className="relative w-64">
+            <div className="relative w-full max-w-sm min-w-0">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search invoices..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
+                className="pl-8 w-full min-w-0"
               />
             </div>
           </div>
