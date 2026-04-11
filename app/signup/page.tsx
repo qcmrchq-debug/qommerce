@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Receipt } from "lucide-react"
+import { Receipt, Eye, EyeOff } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import Link from "next/link"
 import { signUpVendor, signUpClient } from "@/app/actions/auth"
@@ -17,6 +17,10 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [userType, setUserType] = useState<"vendor" | "client">("vendor")
+  const [showVendorPassword, setShowVendorPassword] = useState(false)
+  const [showVendorConfirm, setShowVendorConfirm] = useState(false)
+  const [showClientPassword, setShowClientPassword] = useState(false)
+  const [showClientConfirm, setShowClientConfirm] = useState(false)
   const router = useRouter()
 
   const [vendorForm, setVendorForm] = useState({
@@ -218,30 +222,50 @@ export default function SignUpPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="vendor-password">Password *</Label>
-                    <Input
-                      id="vendor-password"
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={vendorForm.password}
-                      onChange={(e) => setVendorForm({ ...vendorForm, password: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="vendor-password"
+                        type={showVendorPassword ? "text" : "password"}
+                        placeholder="At least 6 characters"
+                        value={vendorForm.password}
+                        onChange={(e) => setVendorForm({ ...vendorForm, password: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        className="h-11 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowVendorPassword(!showVendorPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        disabled={isLoading}
+                      >
+                        {showVendorPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="vendor-confirm">Confirm Password *</Label>
-                    <Input
-                      id="vendor-confirm"
-                      type="password"
-                      placeholder="Re-enter your password"
-                      value={vendorForm.confirmPassword}
-                      onChange={(e) => setVendorForm({ ...vendorForm, confirmPassword: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="vendor-confirm"
+                        type={showVendorConfirm ? "text" : "password"}
+                        placeholder="Re-enter your password"
+                        value={vendorForm.confirmPassword}
+                        onChange={(e) => setVendorForm({ ...vendorForm, confirmPassword: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        className="h-11 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowVendorConfirm(!showVendorConfirm)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        disabled={isLoading}
+                      >
+                        {showVendorConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <Button type="submit" className="h-11 w-full" disabled={isLoading}>
@@ -308,30 +332,50 @@ export default function SignUpPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="client-password">Password *</Label>
-                    <Input
-                      id="client-password"
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={clientForm.password}
-                      onChange={(e) => setClientForm({ ...clientForm, password: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="client-password"
+                        type={showClientPassword ? "text" : "password"}
+                        placeholder="At least 6 characters"
+                        value={clientForm.password}
+                        onChange={(e) => setClientForm({ ...clientForm, password: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        className="h-11 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowClientPassword(!showClientPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        disabled={isLoading}
+                      >
+                        {showClientPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="client-confirm">Confirm Password *</Label>
-                    <Input
-                      id="client-confirm"
-                      type="password"
-                      placeholder="Re-enter your password"
-                      value={clientForm.confirmPassword}
-                      onChange={(e) => setClientForm({ ...clientForm, confirmPassword: e.target.value })}
-                      required
-                      disabled={isLoading}
-                      className="h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="client-confirm"
+                        type={showClientConfirm ? "text" : "password"}
+                        placeholder="Re-enter your password"
+                        value={clientForm.confirmPassword}
+                        onChange={(e) => setClientForm({ ...clientForm, confirmPassword: e.target.value })}
+                        required
+                        disabled={isLoading}
+                        className="h-11 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowClientConfirm(!showClientConfirm)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        disabled={isLoading}
+                      >
+                        {showClientConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <Button type="submit" className="h-11 w-full" disabled={isLoading}>

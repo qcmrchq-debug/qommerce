@@ -1,6 +1,7 @@
 import CreateInvoiceClient from "./CreateInvoiceClient"
 import { getClients } from "@/app/actions/invoices"
 import { getVendorId } from "@/app/actions/vendors"
+import { createClient } from "@/lib/supabase/server"
 import * as z from "zod"
 
 const itemSchema = z.object({

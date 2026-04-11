@@ -62,7 +62,7 @@ export function DashboardHeader({ user, mobileMenu }: DashboardHeaderProps) {
         <div className="flex items-center gap-3">
           {mobileMenu}
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Receipt className="h-5 w-5" />
+            <span className="text-[13px] font-semibold tracking-tight leading-none whitespace-nowrap">QOM</span>
           </div>
           <div className="hidden sm:block">
             <h1 className="text-lg font-semibold tracking-tight">QOMMERCE</h1>

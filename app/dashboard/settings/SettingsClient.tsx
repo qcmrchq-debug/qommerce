@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form"
 import { getVendorProfile, updateVendorProfile, updateVendorBankingDetails } from "@/app/actions/vendors"
 import { savePayFastCredentials } from "@/app/actions/payfast"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff } from "lucide-react"
 
 interface VendorProfile {
   vendor_id: number
@@ -52,6 +52,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
   const [merchantId, setMerchantId] = useState(initialProfile?.payfast_merchant_id || "")
   const [merchantKey, setMerchantKey] = useState(initialProfile?.payfast_merchant_key || "")
   const [passphrase, setPassphrase] = useState("")
+  const [showPassphrase, setShowPassphrase] = useState(false)
 
   const {
     register: registerProfile,
@@ -359,13 +360,23 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
 
                 <div className="space-y-2">
                   <Label htmlFor="passphrase">Passphrase</Label>
-                  <Input
-                    id="passphrase"
-                    type="password"
-                    value={passphrase}
-                    onChange={(event) => setPassphrase(event.target.value)}
-                    placeholder="Enter your PayFast passphrase"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="passphrase"
+                      type={showPassphrase ? "text" : "password"}
+                      value={passphrase}
+                      onChange={(event) => setPassphrase(event.target.value)}
+                      placeholder="Enter your PayFast passphrase"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassphrase(!showPassphrase)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassphrase ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Passphrase is stored securely and will never be shown again.
                   </p>
@@ -427,20 +438,6 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
           </CardContent>
         </Card>
 
-        <Card className="opacity-75">
-          <CardHeader>
-            <CardTitle>Payment Integration</CardTitle>
-            <CardDescription>Configure payment gateways for QR code generation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-dashed bg-muted/50 px-4 py-6 text-center">
-              <p className="text-sm font-medium">Coming soon</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Payment gateway integration will be available in a future update.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

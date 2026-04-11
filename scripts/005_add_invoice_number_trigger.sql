@@ -16,6 +16,10 @@ BEGIN
     FROM invoices
     WHERE vendor_id = NEW.vendor_id;
 
+    IF next_num IS NULL OR next_num < 1 THEN
+      next_num := 1;
+    END IF;
+
     NEW.invoice_number := 'INV-' || lpad(next_num::text, 5, '0');
   END IF;
 

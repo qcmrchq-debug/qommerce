@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardSidebar, DashboardMobileMenu } from "@/components/dashboard-sidebar"
+import PayFastBanner from "@/app/dashboard/PayFastBanner"
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Verify user is actually a vendor in the database
   const { data: vendorRow, error: vendorError } = await supabase
     .from("vendors")
-    .select("vendor_id")
+    .select("vendor_id, payfast_connected")
     .eq("email", user.email)
     .maybeSingle()
 
@@ -34,6 +35,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-screen flex-col">
       <DashboardHeader user={user} mobileMenu={<DashboardMobileMenu />} />
+      <PayFastBanner payfastConnected={vendorRow.payfast_connected} />
       <div className="flex flex-1 overflow-hidden">
         <DashboardSidebar />
         <main className="flex-1 overflow-y-auto bg-muted/30">{children}</main>

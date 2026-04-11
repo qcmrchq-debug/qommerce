@@ -42,6 +42,7 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
   const [paymentMethod, setPaymentMethod] = useState<PayMethod>("manual")
   const [isProcessing, setIsProcessing] = useState(false)
   const [manualInitiated, setManualInitiated] = useState(false)
+  const [payfastError, setPayfastError] = useState<string | null>(null)
 
   const bankDetails = invoice.vendors?.banking_details
   const manualInstructions = bankDetails
@@ -81,12 +82,19 @@ You will receive a receipt once payment is confirmed.`
 
   const handlePayment = async () => {
     setIsProcessing(true)
+    setPayfastError(null)
 
     try {
       if (paymentMethod === "payfast") {
-        const result = await buildPayFastPaymentData(invoice.id)
-        submitPayFastForm(result.payfastUrl, result.formData)
-        return
+        try {
+          const result = await buildPayFastPaymentData(invoice.id)
+          submitPayFastForm(result.payfastUrl, result.formData)
+          return
+        } catch (error) {
+          setPayfastError("PayFast is not available for this invoice. Please use bank transfer instead.")
+          setIsProcessing(false)
+          return
+        }
       }
 
       setManualInitiated(true)
@@ -170,7 +178,10 @@ You will receive a receipt once payment is confirmed.`
             <CardDescription>Select how you would like to pay</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PayMethod)}>
+            <RadioGroup value={paymentMethod} onValueChange={(v) => {
+              setPaymentMethod(v as PayMethod)
+              setPayfastError(null)
+            }}>
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                 <RadioGroupItem value="manual" id="manual" />
                 <Label htmlFor="manual" className="flex-1 cursor-pointer">
@@ -197,6 +208,12 @@ You will receive a receipt once payment is confirmed.`
                 </Label>
               </div>
             </RadioGroup>
+
+            {payfastError && paymentMethod === "payfast" && (
+              <Alert variant="destructive">
+                <AlertDescription>{payfastError}</AlertDescription>
+              </Alert>
+            )}
 
             {paymentMethod === "manual" && (
               <div className="rounded-lg border border-muted/50 bg-muted p-4 text-sm">

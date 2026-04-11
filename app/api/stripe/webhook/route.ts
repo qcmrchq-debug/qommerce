@@ -3,10 +3,6 @@ import Stripe from "stripe"
 import { createClient } from "@/lib/supabase/server"
 import { markInvoicePaidAndCreateReceipt } from "@/lib/receipt-helpers"
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-if (!webhookSecret) {
-  console.warn("STRIPE_WEBHOOK_SECRET not set - Stripe webhook will reject requests")
-}
 
 export async function POST(req: NextRequest) {
   if (!webhookSecret) {

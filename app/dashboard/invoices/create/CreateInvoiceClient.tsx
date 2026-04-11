@@ -83,7 +83,8 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
 
   const watchedItems = watch("items")
   const subtotal = watchedItems?.reduce((sum, item) => sum + (item.quantity || 0) * (item.price || 0), 0) || 0
-  const taxRate = 0.15 // 15% tax
+  const [taxRatePercent, setTaxRatePercent] = useState<number>(15)
+  const taxRate = taxRatePercent / 100
   const taxAmount = subtotal * taxRate
   const total = subtotal + taxAmount
 
@@ -281,8 +282,20 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                 <span>Subtotal:</span>
                 <span>R{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Tax (15%):</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span>Tax:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.01}
+                    value={taxRatePercent}
+                    onChange={(e) => setTaxRatePercent(parseFloat(e.target.value) || 0)}
+                    className="w-16 border rounded px-2 py-0.5 text-sm text-right"
+                  />
+                  <span>%</span>
+                </div>
                 <span>R{taxAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-2">
