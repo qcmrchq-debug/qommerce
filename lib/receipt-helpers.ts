@@ -22,6 +22,34 @@ export async function markInvoicePaidAndCreateReceipt(
   },
   paymentMethod: string
 ): Promise<{ receipt: any }> {
+  // If the invoice already had a receipt generated, return the existing receipt.
+  const { data: existingInvoice, error: existingInvoiceError } = await supabase
+    .from("invoices")
+    .select("receipt_generated")
+    .eq("id", invoiceId)
+    .eq("vendor_id", vendorId)
+    .single()
+
+  if (existingInvoiceError || !existingInvoice) {
+    throw new Error("Invoice not found.")
+  }
+
+  if (existingInvoice.receipt_generated) {
+    const { data: existingReceipts, error: receiptQueryError } = await supabase
+      .from("receipts")
+      .select("*")
+      .eq("invoice_id", invoiceId)
+      .limit(1)
+
+    if (receiptQueryError) {
+      throw new Error("Failed to load existing receipt.")
+    }
+
+    if (existingReceipts && existingReceipts.length > 0) {
+      return { receipt: existingReceipts[0] }
+    }
+  }
+
   // Update invoice status
   const { error: updateError } = await supabase
     .from("invoices")
