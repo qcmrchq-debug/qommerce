@@ -30,12 +30,18 @@ interface PaymentClientProps {
         account_number?: string | null
         branch_code?: string | null
         account_holder?: string | null
+        swift_code?: string | null
+      } | null
+      mobile_money?: {
+        full_name?: string | null
+        country?: string | null
+        mobile_number?: string | null
       } | null
     } | null
   }
 }
 
-type PayMethod = "manual" | "payfast"
+type PayMethod = "manual" | "payfast" | "mobile_money"
 
 export default function PaymentClient({ invoice }: PaymentClientProps) {
   const router = useRouter()
@@ -45,14 +51,22 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
   const [payfastError, setPayfastError] = useState<string | null>(null)
 
   const bankDetails = invoice.vendors?.banking_details
-  const manualInstructions = bankDetails
-    ? `Bank Transfer / Mobile Money
+  const mobileMoneyDetails = invoice.vendors?.mobile_money
+  const hasMobileMoney = Boolean(
+    mobileMoneyDetails?.full_name?.trim() &&
+    mobileMoneyDetails?.country?.trim() &&
+    mobileMoneyDetails?.mobile_number?.trim()
+  )
+
+  const bankTransferInstructions = bankDetails
+    ? `Bank Transfer
 
 1. Transfer the invoice amount to:
    Bank: ${bankDetails.bank_name || "N/A"}
    Account: ${bankDetails.account_number || "N/A"}
    Branch: ${bankDetails.branch_code || "N/A"}
    Account Holder: ${bankDetails.account_holder || "N/A"}
+   SWIFT Code: ${bankDetails.swift_code || "N/A"}
    Reference: [Your invoice number]
 
 2. Email proof of payment to your vendor.
@@ -61,6 +75,22 @@ export default function PaymentClient({ invoice }: PaymentClientProps) {
 
 You will receive a receipt once payment is confirmed.`
     : "This vendor has not set up banking details yet."
+
+  const mobileMoneyInstructions = mobileMoneyDetails
+    ? `Mobile Money
+
+1. Send payment to:
+   Full Name: ${mobileMoneyDetails.full_name || "N/A"}
+   Country: ${mobileMoneyDetails.country || "N/A"}
+   Mobile Number: ${mobileMoneyDetails.mobile_number || "N/A"}
+   Reference: [Your invoice number]
+
+2. Email proof of payment to your vendor.
+
+3. Your vendor will confirm receipt and mark the invoice as paid.
+
+You will receive a receipt once payment is confirmed.`
+    : "This vendor has not set up mobile money details yet."
 
   const submitPayFastForm = (actionUrl: string, formData: Record<string, string>) => {
     const form = document.createElement("form")
@@ -113,12 +143,12 @@ You will receive a receipt once payment is confirmed.`
           <CardHeader>
             <CardTitle>Payment Instructions</CardTitle>
             <CardDescription>
-              Complete your bank transfer or mobile money payment for invoice {invoice.invoice_number}
+              Complete your payment instructions for invoice {invoice.invoice_number}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted p-4 whitespace-pre-wrap text-sm font-mono">
-              {manualInstructions}
+              {paymentMethod === "mobile_money" ? mobileMoneyInstructions : bankTransferInstructions}
             </div>
             <p className="text-sm text-muted-foreground">
               Your invoice is marked as payment pending. You will receive a receipt once your vendor confirms payment.
@@ -188,12 +218,27 @@ You will receive a receipt once payment is confirmed.`
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
                     <div>
-                      <div className="font-medium">Bank Transfer / Mobile Money</div>
-                      <div className="text-sm text-muted-foreground">Manual payment</div>
+                      <div className="font-medium">Bank Transfer</div>
+                      <div className="text-sm text-muted-foreground">Pay by bank transfer</div>
                     </div>
                   </div>
                 </Label>
               </div>
+
+              {hasMobileMoney && (
+                <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
+                  <RadioGroupItem value="mobile_money" id="mobile_money" />
+                  <Label htmlFor="mobile_money" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <div>
+                        <div className="font-medium">Mobile Money</div>
+                        <div className="text-sm text-muted-foreground">Pay using mobile money details</div>
+                      </div>
+                    </div>
+                  </Label>
+                </div>
+              )}
 
               <div className="flex items-center space-x-2 p-4 border rounded-lg hover:bg-accent cursor-pointer">
                 <RadioGroupItem value="payfast" id="payfast" />
@@ -237,11 +282,45 @@ You will receive a receipt once payment is confirmed.`
                         <Label className="text-muted-foreground">Account Holder</Label>
                         <p className="font-medium">{bankDetails.account_holder || "-"}</p>
                       </div>
+                      {bankDetails.swift_code && (
+                        <div>
+                          <Label className="text-muted-foreground">SWIFT Code</Label>
+                          <p className="font-medium">{bankDetails.swift_code}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     This vendor has not set up banking details yet.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {paymentMethod === "mobile_money" && (
+              <div className="rounded-lg border border-muted/50 bg-muted p-4 text-sm">
+                {mobileMoneyDetails ? (
+                  <div className="space-y-2">
+                    <p className="font-medium">Mobile money details for this vendor:</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-muted-foreground">Full Name</Label>
+                        <p className="font-medium">{mobileMoneyDetails.full_name || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Country</Label>
+                        <p className="font-medium">{mobileMoneyDetails.country || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Mobile Number</Label>
+                        <p className="font-medium">{mobileMoneyDetails.mobile_number || "-"}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    This vendor has not set up mobile money details yet.
                   </p>
                 )}
               </div>

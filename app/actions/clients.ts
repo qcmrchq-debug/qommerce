@@ -141,7 +141,7 @@ export async function getClientInvoiceById(invoiceId: number) {
     // Fetch invoice by id with vendor_id to ensure proper access control
     const { data: invoice, error } = await supabase
       .from("invoices")
-      .select("*, vendor_id, vendors!inner(name, email, phone, country, banking_details)")
+      .select("*, vendor_id, vendors!inner(name, email, phone, country, address, tax_number, banking_details, mobile_money)")
       .eq("id", invoiceId)
       .maybeSingle()
 

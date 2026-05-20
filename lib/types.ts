@@ -28,6 +28,20 @@ export interface Invoice {
     email: string
     phone: string | null
     country: string
+    address?: string | null
+    tax_number?: string | null
+    banking_details?: {
+      bank_name?: string | null
+      account_number?: string | null
+      branch_code?: string | null
+      account_holder?: string | null
+      swift_code?: string | null
+    } | null
+    mobile_money?: {
+      full_name?: string | null
+      country?: string | null
+      mobile_number?: string | null
+    } | null
   }
 }
 

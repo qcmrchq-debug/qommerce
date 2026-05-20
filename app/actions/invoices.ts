@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getVendorId } from "@/app/actions/vendors"
 import { markInvoicePaidAndCreateReceipt } from "@/lib/receipt-helpers"
+import { sendInvoiceCreatedEmail } from "@/app/actions/email"
 
 
 export async function getClients(vendorId?: number) {
@@ -52,6 +53,32 @@ export async function getInvoices(vendorId?: number) {
       throw error
     }
     throw new Error("An unexpected error occurred while loading invoices.")
+  }
+}
+
+export async function getInvoiceById(invoiceId: number) {
+  try {
+    const supabase = await createClient()
+    const id = await getVendorId()
+
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*, vendors!inner(name, email, phone, address, tax_number, banking_details, mobile_money)")
+      .eq("id", invoiceId)
+      .eq("vendor_id", id)
+      .single()
+
+    if (error) {
+      console.error("Error fetching invoice:", error)
+      throw new Error("Failed to load invoice. Please try again.")
+    }
+
+    return data
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error("An unexpected error occurred while loading the invoice.")
   }
 }
 
@@ -113,6 +140,12 @@ export async function createInvoice(formData: {
   if (error) {
     console.error("Error creating invoice:", error)
     throw new Error("Failed to create invoice. Please check your input and try again.")
+  }
+
+  try {
+    await sendInvoiceCreatedEmail(String(data.id))
+  } catch (error) {
+    console.error("Invoice created but failed to send email:", error)
   }
 
   return data

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useForm } from "react-hook-form"
-import { getVendorProfile, updateVendorProfile, updateVendorBankingDetails } from "@/app/actions/vendors"
+import { getVendorProfile, updateVendorProfile, updateVendorBankingDetails, updateVendorMobileMoney } from "@/app/actions/vendors"
 import { savePayFastCredentials } from "@/app/actions/payfast"
 import { toast } from "sonner"
 import { Loader2, Eye, EyeOff } from "lucide-react"
@@ -18,6 +18,8 @@ interface VendorProfile {
   phone: string | null
   country: string
   currency: string
+  address?: string | null
+  tax_number?: string | null
   payfast_merchant_id?: string | null
   payfast_merchant_key?: string | null
   payfast_connected?: boolean | null
@@ -26,12 +28,20 @@ interface VendorProfile {
     account_number?: string | null
     branch_code?: string | null
     account_holder?: string | null
+    swift_code?: string | null
+  } | null
+  mobile_money?: {
+    full_name?: string | null
+    country?: string | null
+    mobile_number?: string | null
   } | null
 }
 
 interface ProfileFormData {
   name: string
   phone: string
+  address: string
+  tax_number: string
 }
 
 interface BankingFormData {
@@ -39,6 +49,13 @@ interface BankingFormData {
   account_number: string
   branch_code: string
   account_holder: string
+  swift_code: string
+}
+
+interface MobileMoneyFormData {
+  full_name: string
+  country: string
+  mobile_number: string
 }
 
 export default function SettingsClient({ initialProfile }: { initialProfile: VendorProfile | null }) {
@@ -46,6 +63,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isSavingBanking, setIsSavingBanking] = useState(false)
+  const [mobileMoneyLoading, setMobileMoneyLoading] = useState(false)
   const [isSavingPayFast, setIsSavingPayFast] = useState(false)
   const [payfastConnected, setPayfastConnected] = useState<boolean>(initialProfile?.payfast_connected ?? false)
   const [showPayFastForm, setShowPayFastForm] = useState<boolean>(!(initialProfile?.payfast_connected ?? false))
@@ -63,6 +81,8 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
     defaultValues: {
       name: profile?.name || "",
       phone: profile?.phone || "",
+      address: profile?.address || "",
+      tax_number: profile?.tax_number || "",
     },
   })
 
@@ -77,6 +97,20 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
       account_number: profile?.banking_details?.account_number || "",
       branch_code: profile?.banking_details?.branch_code || "",
       account_holder: profile?.banking_details?.account_holder || "",
+      swift_code: profile?.banking_details?.swift_code || "",
+    },
+  })
+
+  const {
+    register: registerMobileMoney,
+    handleSubmit: handleSubmitMobileMoney,
+    reset: resetMobileMoney,
+    formState: { errors: errorsMobileMoney },
+  } = useForm<MobileMoneyFormData>({
+    defaultValues: {
+      full_name: profile?.mobile_money?.full_name || "",
+      country: profile?.mobile_money?.country || "",
+      mobile_number: profile?.mobile_money?.mobile_number || "",
     },
   })
 
@@ -85,15 +119,23 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
       resetProfile({
         name: profile.name || "",
         phone: profile.phone || "",
+        address: profile.address || "",
+        tax_number: profile.tax_number || "",
       })
       resetBanking({
         bank_name: profile.banking_details?.bank_name || "",
         account_number: profile.banking_details?.account_number || "",
         branch_code: profile.banking_details?.branch_code || "",
         account_holder: profile.banking_details?.account_holder || "",
+        swift_code: profile.banking_details?.swift_code || "",
+      })
+      resetMobileMoney({
+        full_name: profile.mobile_money?.full_name || "",
+        country: profile.mobile_money?.country || "",
+        mobile_number: profile.mobile_money?.mobile_number || "",
       })
     }
-  }, [profile, resetProfile, resetBanking])
+  }, [profile, resetProfile, resetBanking, resetMobileMoney])
 
   useEffect(() => {
     if (initialProfile) {
@@ -112,6 +154,8 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
       const result = await updateVendorProfile({
         name: data.name,
         phone: data.phone || null,
+        address: data.address || null,
+        tax_number: data.tax_number || null,
       })
 
       if (result.success) {
@@ -134,6 +178,7 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
         account_number: data.account_number,
         branch_code: data.branch_code,
         account_holder: data.account_holder,
+        swift_code: data.swift_code || null,
       })
 
       if (result.success) {
@@ -145,6 +190,27 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
       toast.error(error instanceof Error ? error.message : "Failed to save banking details")
     } finally {
       setIsSavingBanking(false)
+    }
+  }
+
+  const onMobileMoneySubmit = async (data: MobileMoneyFormData) => {
+    setMobileMoneyLoading(true)
+    try {
+      const result = await updateVendorMobileMoney({
+        full_name: data.full_name,
+        country: data.country,
+        mobile_number: data.mobile_number,
+      })
+
+      if (result.success) {
+        toast.success("Mobile money details saved successfully")
+        const updated = await getVendorProfile()
+        setProfile(updated)
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save mobile money details")
+    } finally {
+      setMobileMoneyLoading(false)
     }
   }
 
@@ -215,6 +281,14 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" type="tel" {...registerProfile("phone")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" {...registerProfile("address")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tax_number">Tax Number</Label>
+                <Input id="tax_number" {...registerProfile("tax_number")} />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -293,6 +367,16 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
                   )}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="swift_code">SWIFT Code</Label>
+                <Input
+                  id="swift_code"
+                  {...registerBanking("swift_code")}
+                />
+                {errorsBanking.swift_code && (
+                  <p className="text-sm text-destructive">{errorsBanking.swift_code.message}</p>
+                )}
+              </div>
               <Button type="submit" disabled={isSavingBanking}>
                 {isSavingBanking ? (
                   <>
@@ -301,6 +385,59 @@ export default function SettingsClient({ initialProfile }: { initialProfile: Ven
                   </>
                 ) : (
                   "Save Banking Details"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Mobile Money</CardTitle>
+            <CardDescription>Save mobile money transfer details for customers</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmitMobileMoney(onMobileMoneySubmit)} className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="mobile_full_name">Full Name</Label>
+                  <Input
+                    id="mobile_full_name"
+                    {...registerMobileMoney("full_name", { required: "Full name is required" })}
+                  />
+                  {errorsMobileMoney.full_name && (
+                    <p className="text-sm text-destructive">{errorsMobileMoney.full_name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mobile_country">Country</Label>
+                  <Input
+                    id="mobile_country"
+                    {...registerMobileMoney("country", { required: "Country is required" })}
+                  />
+                  {errorsMobileMoney.country && (
+                    <p className="text-sm text-destructive">{errorsMobileMoney.country.message}</p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mobile_number">Mobile Number</Label>
+                <Input
+                  id="mobile_number"
+                  {...registerMobileMoney("mobile_number", { required: "Mobile number is required" })}
+                />
+                {errorsMobileMoney.mobile_number && (
+                  <p className="text-sm text-destructive">{errorsMobileMoney.mobile_number.message}</p>
+                )}
+              </div>
+              <Button type="submit" disabled={mobileMoneyLoading}>
+                {mobileMoneyLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Mobile Money Details"
                 )}
               </Button>
             </form>

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { decrypt } from "@/lib/encryption"
 import { markInvoicePaidAndCreateReceipt } from "@/lib/receipt-helpers"
+import { sendPaymentConfirmedEmail } from "@/app/actions/email"
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text()
@@ -132,6 +133,12 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("PayFast ITN: failed to generate receipt", err)
     return NextResponse.json({ error: "Failed to generate receipt" }, { status: 500 })
+  }
+
+  try {
+    await sendPaymentConfirmedEmail(String(mPaymentId))
+  } catch (err) {
+    console.error("PayFast ITN: failed to send payment confirmation email", err)
   }
 
   return NextResponse.json({ received: true })
