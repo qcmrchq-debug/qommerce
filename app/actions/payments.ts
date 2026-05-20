@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getClientInvoiceById } from "@/app/actions/clients"
 import { markInvoicePaidAndCreateReceipt } from "@/lib/receipt-helpers"
 import { getVendorId } from "@/app/actions/vendors"
+import { sendPaymentConfirmedEmail } from "@/app/actions/email"
 import Stripe from "stripe"
 
 function getBaseUrl(): string {
@@ -141,6 +142,13 @@ export async function confirmManualPayment(
 
   try {
     const { receipt } = await markInvoicePaidAndCreateReceipt(supabase, invoiceId, vendorId, invoice, "bank_transfer")
+    
+    try {
+      await sendPaymentConfirmedEmail(String(invoiceId))
+    } catch (err) {
+      console.error("Failed to send payment confirmation email:", err)
+    }
+    
     return { success: true, receipt }
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Failed to confirm payment." }

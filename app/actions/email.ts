@@ -20,6 +20,15 @@ async function getInvoiceWithVendor(invoiceId: string) {
     .single()
 
   if (error || !data) {
+    if (error instanceof Error) {
+      console.error('Failed to load invoice with vendor:', {
+        message: error.message,
+        stack: error.stack,
+        invoiceId,
+      })
+    } else {
+      console.error('Failed to load invoice with vendor:', { error, invoiceId })
+    }
     throw new Error('Invoice not found')
   }
 
@@ -68,6 +77,11 @@ export async function sendPaymentConfirmedEmail(invoiceId: string): Promise<void
       invoiceNumber: invoice.invoice_number,
       amount: invoice.total_amount,
       currency: invoice.currency,
+    })
+
+    console.log('Sending payment confirmed email for invoice:', {
+      invoiceId,
+      invoice,
     })
 
     await sendEmail({

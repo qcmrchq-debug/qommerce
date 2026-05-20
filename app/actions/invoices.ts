@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getVendorId } from "@/app/actions/vendors"
 import { markInvoicePaidAndCreateReceipt } from "@/lib/receipt-helpers"
-import { sendInvoiceCreatedEmail } from "@/app/actions/email"
+import { sendInvoiceCreatedEmail, sendPaymentConfirmedEmail } from "@/app/actions/email"
 
 
 export async function getClients(vendorId?: number) {
@@ -213,6 +213,12 @@ export async function markInvoiceAsPaid(invoiceId: number, paymentMethod?: strin
     invoice,
     paymentMethod || "bank_transfer"
   )
+
+  try {
+    await sendPaymentConfirmedEmail(String(invoiceId))
+  } catch (error) {
+    console.error("Failed to send payment confirmation email:", error)
+  }
 
   return { invoice, receipt }
 }
