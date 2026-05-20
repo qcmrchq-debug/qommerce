@@ -220,6 +220,8 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                   <Input
                     className="min-w-0 w-full h-10 text-base"
                     type="number"
+                    min={1}
+                    step={1}
                     {...register(`items.${index}.quantity`, { valueAsNumber: true })}
                     placeholder="1"
                   />
@@ -232,7 +234,8 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                   <Input
                     className="min-w-0 w-full h-10 text-base"
                     type="number"
-                    step="0.01"
+                    min={1}
+                    step={1}
                     {...register(`items.${index}.price`, { valueAsNumber: true })}
                     placeholder="0.00"
                   />
@@ -289,7 +292,7 @@ export default function CreateInvoiceClient({ initialClients, vendorId }: { init
                     type="number"
                     min={0}
                     max={100}
-                    step={0.01}
+                    step={1}
                     value={taxRatePercent}
                     onChange={(e) => setTaxRatePercent(parseFloat(e.target.value) || 0)}
                     className="w-16 border rounded px-2 py-0.5 text-sm text-right"

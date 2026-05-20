@@ -479,33 +479,35 @@ export default function InvoicesClient({ initialInvoices, initialClients, vendor
 
             <div className="grid grid-cols-12 gap-4">
               {fieldsEdit.map((field, index) => (
-                <div key={field.id} className="col-span-12 grid grid-cols-12 gap-4 items-end">
-                  <div className="col-span-4">
-                    <Label>Item Name</Label>
-                    <Input {...registerEdit(`items.${index}.name`)} placeholder="Item name" />
-                    {errorsEdit.items?.[index]?.name && (
-                      <p className="text-sm text-destructive">{errorsEdit.items[index].name.message}</p>
-                    )}
+                <div key={field.id} className="col-span-12 space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-12 items-end">
+                    <div className="col-span-12 sm:col-span-4">
+                      <Label>Item Name</Label>
+                      <Input {...registerEdit(`items.${index}.name`)} placeholder="Item name" />
+                      {errorsEdit.items?.[index]?.name && (
+                        <p className="text-sm text-destructive">{errorsEdit.items[index].name.message}</p>
+                      )}
+                    </div>
+                    <div className="col-span-12 sm:col-span-4">
+                      <Label>Description (Optional)</Label>
+                      <Input {...registerEdit(`items.${index}.description`)} placeholder="Description" />
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Label>Qty</Label>
+                      <Input type="number" min={1} step={1} {...registerEdit(`items.${index}.quantity`, { valueAsNumber: true })} placeholder="1" />
+                      {errorsEdit.items?.[index]?.quantity && (
+                        <p className="text-sm text-destructive">{errorsEdit.items[index].quantity.message}</p>
+                      )}
+                    </div>
+                    <div className="col-span-6 sm:col-span-2">
+                      <Label>Price</Label>
+                      <Input type="number" min={1} step={1} {...registerEdit(`items.${index}.price`, { valueAsNumber: true })} placeholder="0.00" />
+                      {errorsEdit.items?.[index]?.price && (
+                        <p className="text-sm text-destructive">{errorsEdit.items[index].price.message}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="col-span-4">
-                    <Label>Description (Optional)</Label>
-                    <Input {...registerEdit(`items.${index}.description`)} placeholder="Description" />
-                  </div>
-                  <div className="col-span-2">
-                    <Label>Qty</Label>
-                    <Input type="number" {...registerEdit(`items.${index}.quantity`, { valueAsNumber: true })} placeholder="1" />
-                    {errorsEdit.items?.[index]?.quantity && (
-                      <p className="text-sm text-destructive">{errorsEdit.items[index].quantity.message}</p>
-                    )}
-                  </div>
-                  <div className="col-span-1">
-                    <Label>Price</Label>
-                    <Input type="number" step="0.01" {...registerEdit(`items.${index}.price`, { valueAsNumber: true })} placeholder="0.00" />
-                    {errorsEdit.items?.[index]?.price && (
-                      <p className="text-sm text-destructive">{errorsEdit.items[index].price.message}</p>
-                    )}
-                  </div>
-                  <div className="col-span-1 flex items-center">
+                  <div className="flex justify-end">
                     <Button type="button" variant="outline" size="icon" onClick={() => removeEdit(index)} disabled={fieldsEdit.length === 1}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
